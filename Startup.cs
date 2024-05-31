@@ -18,14 +18,17 @@ public class Startup
     {
         services.AddControllers();
 
-        services.AddDbContext<ApplicationDbContext>(options =>
+        // Optimize DbContext with a pool to reuse instances
+        // Adjust the pool size according to your needs
+        services.AddDbContextPool<ApplicationDbContext>(options =>
             options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
-        // Add services for Swagger
+        // Minimize the impact of services that are not frequently used
         services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bookstore API", Version = "v1" });
         });
+        // Configure Swagger to only activate it in Development, reducing overhead in Production.
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -33,14 +36,11 @@ public class Startup
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
+
+            // Only use Swagger in Development to reduce memory usage in Production
+            app.UseSwagger();
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Bookstore API V1"));
         }
-
-        // Enable middleware to serve generated Swagger as a JSON endpoint.
-        app.UseSwagger();
-
-        // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.),
-        // specifying the Swagger JSON endpoint.
-        app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Bookstore API V1"));
 
         app.UseRouting();
 
@@ -58,4 +58,7 @@ public class ApplicationDbContext : DbContext
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
+
+    // Consider overriding OnModelCreating and using ModelBuilder to fine-tune your models for optimal storage and querying.
+    // This is crucial for optimizing data usage and memory consumption.
 }
