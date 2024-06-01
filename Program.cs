@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 
 namespace YourNamespace
@@ -9,7 +11,15 @@ namespace YourNamespace
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            try
+            {
+                CreateHostBuilder(args).Build().Run();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fatal error starting the application: {ex.Message}");
+                // Here we might log to a file or other logging infrastructure
+            }
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -23,8 +33,12 @@ namespace YourNamespace
                     // Read environment variable
                     var myEnvVariable = Environment.GetEnvironmentVariable("MY_ENV_VARIABLE");
 
-                    // Potentially use the environment variable here 
-                    // or pass it to services as needed
+                    // Configuring a service to use the environment variable or other configuration based on it
+                })
+                .ConfigureLogging(logging => 
+                {
+                    logging.ClearProviders(); // Clears all the default logging providers.
+                    logging.AddConsole(); // Adds a console logger.
                 });
     }
 
@@ -32,27 +46,34 @@ namespace YourNamespace
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            // Here, you will add services to the container.
-            // For example, to add support for controllers:
-            // services.AddControllers();
+            services.AddControllers();
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
-            // This is where you'd configure the HTTP request pipeline.
-            
-            // Example middleware usage:
-            // if (env.IsDevelopment())
-            // {
-            //     app.UseDeveloperExceptionPage();
-            // }
-            // 
-            // app.UseRouting();
-            //
-            // app.UseEndpoints(endpoints =>
-            // {
-            //     endpoints.MapControllers();
-            // });
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+            else
+            {
+                app.UseExceptionHandler(errorApp =>
+                {
+                    errorApp.Run(async context =>
+                    {
+                        context.Response.StatusCode = 500; 
+                        await context.Response.WriteAsync("An unexpected error occurred. Please try again later.");
+                        logger.LogError("An unexpected error occurred.");
+                    });
+                });
+            }
+
+            app.UseRouting();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
         }
     }
 }
