@@ -4,6 +4,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models; // Add this for Swagger
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using System.Net;
+using System.Text.Json;
 
 public class Startup
 {
@@ -18,17 +22,15 @@ public class Startup
     {
         services.AddControllers();
 
-        // Optimize DbContext with a pool to reuse instances
-        // Adjust the pool size according to your needs
+        // Add DbContextPool
         services.AddDbContextPool<ApplicationDbContext>(options =>
             options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
-        // Minimize the impact of services that are not frequently used
+        // Add SwaggerGen
         services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bookstore API", Version = "v1" });
         });
-        // Configure Swagger to only activate it in Development, reducing overhead in Production.
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -37,11 +39,29 @@ public class Startup
         {
             app.UseDeveloperExceptionPage();
 
-            // Only use Swagger in Development to reduce memory usage in Production
             app.UseSwagger();
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Bookstore API V1"));
         }
 
+        // Use Custom Error Handling Middleware
+        app.UseExceptionHandler(builder =>
+        {
+            builder.Run(async context =>
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                var ex = context.Features.Get<IExceptionHandlerFeature>();
+                if (ex != null)
+                {
+                    await context.Response.WriteAsync(JsonSerializer.Serialize(new
+                    {
+                        StatusCode = context.Response.StatusCode,
+                        Message = "An unexpected error has occurred!"
+                    }));
+                }
+            });
+        });
+
+        // Continue with middleware setup
         app.UseRouting();
 
         app.UseAuthorization();
@@ -58,7 +78,4 @@ public class ApplicationDbContext : DbContext
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
-
-    // Consider overriding OnModelCreating and using ModelBuilder to fine-tune your models for optimal storage and querying.
-    // This is crucial for optimizing data usage and memory consumption.
 }
