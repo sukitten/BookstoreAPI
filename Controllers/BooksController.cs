@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -8,95 +7,95 @@ using YourNamespace.Data;
 
 public class BooksController : Controller
 {
-    private readonly YourDbContext _context;
+    private readonly YourDbContext _dbContext;
 
-    public BooksController(YourDbContext context)
+    public BooksController(YourDbContext dbContext)
     {
-        _context = context;
+        _dbContext = dbContext;
     }
 
-    public async Task<IActionResult> Index(string searchString, string sortOrder)
+    public async Task<IActionResult> ListBooks(string searchKeyword, string sortOption)
     {
-        ViewData["PublishedDateSortParm"] = string.IsNullOrEmpty(sortOrder) ? "date_desc" : "";
-        ViewData["CurrentFilter"] = searchString;
+        ViewData["PublishedDateSortParam"] = string.IsNullOrEmpty(sortOption) ? "date_desc" : "";
+        ViewData["CurrentSearch"] = searchKeyword;
 
-        var books = from b in _context.Books
-                     select b;
+        var booksQuery = from book in _dbContext.Books
+                     select book;
 
-        if (!string.IsNullOrEmpty(searchString))
+        if (!string.IsNullOrEmpty(searchKeyword))
         {
-            books = books.Where(s => s.Title.Contains(searchString)
-                                   || s.Author.Contains(searchString));
+            booksQuery = booksQuery.Where(book => book.Title.Contains(searchKeyword)
+                                   || book.Author.Contains(searchKeyword));
         }
 
-        switch (sortOrder)
+        switch (sortOption)
         {
             case "date_desc":
-                books = books.OrderByDescending(b => b.PublishedDate);
+                booksQuery = booksQuery.OrderByDescending(book => book.PublishedDate);
                 break;
             default:
-                books = books.OrderBy(b => b.PublishedDate);
+                booksQuery = booksQuery.OrderBy(book => book.PublishedDate);
                 break;
         }
 
-        return View(await books.AsNoTracking().ToListAsync());
+        return View(await booksQuery.AsNoTracking().ToListAsync());
     }
 
-    public async Task<IActionResult> Details(int? id)
+    public async Task<IActionResult> ViewDetails(int? bookId)
     {
-        if (id == null)
+        if (bookId == null)
         {
             return NotFound();
         }
 
-        var book = await _context.Books
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (book == null)
+        var bookDetails = await _dbContext.Books
+            .FirstOrDefaultAsync(book => book.Id == bookId);
+        if (bookDetails == null)
         {
             return NotFound();
         }
 
-        return View(book);
+        return View(bookDetails);
     }
 
-    public IActionResult Create()
+    public IActionResult CreateBook()
     {
         return View();
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Title,Author,PublishedDate")] Book book)
+    public async Task<IActionResult> CreateBook([Bind("Id,Title,Author,PublishedDate")] Book book)
     {
         if (ModelState.IsValid)
         {
-            _context.Add(book);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            _dbContext.Add(book);
+            await _dbContext.SaveChangesAsync();
+            return RedirectToAction(nameof(ListBooks));
         }
         return View(book);
     }
 
-    public async Task<IActionResult> Edit(int? id)
+    public async Task<IActionResult> EditBook(int? bookId)
     {
-        if (id == null)
+        if (bookId == null)
         {
             return NotFound();
         }
 
-        var book = await _context.Books.FindAsync(id);
-        if (book == null)
+        var bookToEdit = await _dbContext.Books.FindAsync(bookId);
+        if (bookToEdit == null)
         {
             return NotFound();
         }
-        return View(book);
+        return View(bookToEdit);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Author,PublishedDate")] Book book)
+    public async Task<IActionResult> EditBook(int bookId, [Bind("Id,Title,Author,PublishedDate")] Book book)
     {
-        if (id != book.Id)
+        if (bookId != book.Id)
         {
             return NotFound();
         }
@@ -105,12 +104,12 @@ public class BooksController : Controller
         {
             try
             {
-                _context.Update(book);
-                await _context.SaveChangesAsync();
+                _dbContext.Update(book);
+                await _dbContext.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!BookExists(book.Id))
+                if (!IsBookExists(book.Id))
                 {
                     return NotFound();
                 }
@@ -119,39 +118,40 @@ public class BooksController : Controller
                     throw;
                 }
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(ListBooks));
         }
         return View(book);
     }
 
-    public async Task<IActionResult> Delete(int? id)
+    public async Task<IActionResult> DeleteBook(int? bookId)
     {
-        if (id == null)
+        if (bookId == null)
         {
             return NotFound();
         }
 
-        var book = await _context.Books
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (book ==    
+        var bookToDelete = await _dbContext.Books
+            .FirstOrDefaultAsync(book => book.Id == bookId);
+        if (bookToDelete == null)
+        {
             return NotFound();
         }
 
-        return View(book);
+        return View(bookToDelete);
     }
 
-    [HttpPost, ActionName("Delete")]
+    [HttpPost, ActionName("DeleteBook")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
+    public async Task<IActionResult> DeleteBookConfirmed(int bookId)
     {
-        var book = await _context.Books.FindAsync(id);
-        _context.Books.Remove(book);
-        await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
+        var bookToDelete = await _dbContext.Books.FindAsync(bookId);
+        _dbContext.Books.Remove(bookToDelete);
+        await _dbContext.SaveChangesAsync();
+        return RedirectToAction(nameof(ListBooks));
     }
 
-    private bool BookExists(int id)
+    private bool IsBookExists(int bookId)
     {
-        return _context.Books.Any(e => e.Id == id);
+        return _dbContext.Books.Any(book => book.Id == bookId);
     }
 }
