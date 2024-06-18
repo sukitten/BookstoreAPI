@@ -11,32 +11,32 @@ namespace YourNamespace.Controllers
     [ApiController]
     public class OrdersController : ControllerBase
     {
-        private readonly DataContext _context;
+        private readonly DataContext _dataContext;
 
-        public OrdersController(DataContext context)
+        public OrdersController(DataContext dataContext)
         {
-            _context = context;
+            _dataContext = dataContext;
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Order>> GetOrders()
+        public ActionResult<IEnumerable<Order>> GetAllOrders()
         {
             try
             {
-                return _context.Orders.ToList();
+                return _dataContext.Orders.ToList();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, "An internal error has occurred."); 
             }
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Order> GetOrder(int id)
+        public ActionResult<Order> GetOrderById(int id)
         {
             try
             {
-                var order = _context.Orders.Find(id);
+                var order = _dataContext.Orders.Find(id);
 
                 if (order == null)
                 {
@@ -45,45 +45,45 @@ namespace YourNamespace.Controllers
 
                 return order;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, "An internal server error has occurred.");
             }
         }
 
         [HttpPost]
-        public ActionResult<Order> PostOrder(Order order)
+        public ActionResult<Order> CreateOrder(Order order)
         {
             try
             {
-                _context.Orders.Add(order);
-                _context.SaveChanges();
+                _dataContext.Orders.Add(order);
+                _dataContext.SaveChanges();
 
-                return CreatedAtAction("GetOrder", new { id = order.Id }, order);
+                return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, "An error occurred while creating the order.");
             }
         }
 
-        [HttpPut("{a}")]
-        public IActionResult PutOrder(int id, Order order)
+        [HttpPut("{id}")]
+        public IActionResult UpdateOrder(int id, Order order)
         {
             if (id != order.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(order).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+            _data.isDirectory(order).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
 
             try
             {
-                _context.SaveChanges();
+                _dataContext.SaveChanges();
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
+            catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
             {
-                if (!_context.Orders.Any(e => e.Id == id))
+                if (!_dataContext.Orders.Any(e => e.Id == id))
                 {
                     return NotFound();
                 }
@@ -92,7 +92,7 @@ namespace YourNamespace.Controllers
                     return StatusCode(500, "An error occurred while updating the order.");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, "An unexpected error has occurred.");
             }
@@ -101,22 +101,22 @@ namespace YourNamespace.Controllers
         }
 
         [HttpDelete("{id}")]
-        public ActionResult<Order> DeleteOrder(int id)
+        public ActionResult<Order> DeleteOrderById(int id)
         {
             try
             {
-                var order = _context.Orders.Find(id);
-                if (order == null)
+                var orderToDelete = _dataContext.Orders.Find(id);
+                if (orderToDelete == null)
                 {
                     return NotFound();
                 }
 
-                _context.Orders.Remove(order);
-                _context.SaveChanges();
+                _dataContext.Orders.Remove(orderToDelete);
+                _dataContext.SaveChanges();
 
-                return order;
+                return orderToDelete;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, "An error occurred while deleting the order.");
             }
