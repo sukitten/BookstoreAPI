@@ -1,21 +1,30 @@
-using System.ComponentModel.DataAnnotations;
-
-public class Book
+public class BookService
 {
-    [Key]
-    public int Id { get; set; }
+    private readonly AppDbContext _dbContext; // Assuming you have a DbContext for EF Core.
+    private readonly ILogger<BookService> _logger;
 
-    [Required(ErrorMessage = "Title is required")]
-    [StringLength(100, ErrorMessage = "Title cannot exceed 100 characters")]
-    public string Title { get; set; }
+    public BookService(AppDbContext dbContext, ILogger<BookCategory> logger)
+    {
+        _dbContext = dbContext;
+        _logger = logger;
+    }
 
-    [Required(ErrorMessage = "AuthorId is required")]
-    public int AuthorId { get; set; }
+    public async Task<bool> AddBookAsync(Book book)
+    {
+        try
+        {
+            await _dbContext.Books.AddAsync(book);
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Log the exception detail
+            _logger.LogError(ex, "An error occurred while adding a new book: {Title}", book.Title);
+            // Optionally, refine the exception handling to differentiate between types of exceptions
+            // and rethrow or handle accordingly.
 
-    [Required(ErrorMessage = "Price is required")]
-    [Range(0.01, 10000.00, ErrorMessage = "Price must be between 0.01 and 10000.00")]
-    public decimal Price { get; set; }
-
-    [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-    public string Description { get; set; }
+            return false; // Or throw a custom exception to be handled further up the call stack.
+        }
+    }
 }
