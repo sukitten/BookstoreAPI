@@ -1,20 +1,19 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 public class BookService
 {
-    private readonly AppDbContext _dbContext; // Assuming you have a DbContext for EF Core.
+    private readonly AppModelsDBContext _dbContext; // Assuming you have a DbContext for EF Core.
     private readonly ILogger<BookService> _logger;
 
-    // Constructor's logger parameter type fixed to match BookService
-    public BookService(AppDbContext dbContext, ILogger<BookService> logger)
+    public BookService(AppModelsDBContext dbContext, ILogger<BookService> _logger)
     {
         _dbContext = dbContext;
-        _logger = logger;
+        this._logger = _logger;
     }
-
-    // Improved method name for clarity
+    
     public async Task<bool> AddBookAsync(Book newBook)
     {
         try
@@ -25,10 +24,30 @@ public class BookService
         }
         catch (Exception ex)
         {
-            // Enhanced the log message for clarity
             _logger.LogError(ex, "Failed to add a new book: {BookTitle}", newBook.Title);
+            return false;
+        }
+    }
 
-            return false; // Or consider a specific exception handling strategy.
+    public async Task<bool> AddBooksAsync(IEnumerable<Book> newBooks)
+    {
+        try
+        {
+            await _dbContext.Books.AddRangeAsync(newBooks);
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            if(newBooks != null && await newBooks.AnyAsync())
+            {
+                _logger.LogError(ex, "Failed to add new books, example title: {BookTitle}", newBooks.First().Title);
+            }
+            else
+            {
+                _logger.LogError(ex, "Failed to add new books, no books provided");
+            }
+            return false;
         }
     }
 }
