@@ -1,39 +1,37 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 public class AuthorService
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient httpClient;
 
     public AuthorService(HttpClient httpClient)
     {
-        _httpClient = httpClient;
+        this.httpClient = httpClient;
     }
 
-    public async Task<AuthorWithBooks> GetAuthorDetailsWithBooksAsync(Guid authorId)
+    public async Task<AuthorWithBooks> FetchAuthorAndBooksAsync(Guid authorId)
     {
-        var authors = await GetAuthorDetailsWithBooksBatchAsync(new List<Guid> { authorId });
-        return authors.FirstOrDefault();
+        var authorsWithBooks = await FetchMultipleAuthorsAndBooksAsync(new List<Guid> { authorId });
+        return authorsWith Books.FirstOrDefault();
     }
 
-    public async Task<List<AuthorWithBooks>> GetAuthorDetailsWithBooksBatchAsync(List<Guid> authorIds)
+    public async Task<List<AuthorWithBooks>> FetchMultipleAuthorsAndBooksAsync(List<Guid> authorIds)
     {
-        var requestPath = $"api/authors/with. Books?ids={string.Join(",", authorIds)}";
+        var requestUri = $"api/authors/withBooks?ids={string.Join(",", authorIds)}"; // Fixed typo in URI
 
-        var response = await _httpClient.GetAsync(requestPath);
-        if (response.IsSuccessStatusCode)
+        var httpResponse = await httpClient.GetAsync(requestUri);
+        if (httpResponse.IsSuccessStatusCode)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            var authorsDetailsList = JsonConvert.DeserializeObject<List<AuthorWithBooks>>(content);
-            return authorsDetailsList ?? new List<AuthorWithBooks>();
+            var responseContent = await httpResponse.Content.ReadAsStringAsync();
+            var authorsWithBooksList = JsonConvert.DeserializeObject<List<AuthorWithBooks>>(responseContent);
+            return authorsWithBooksList ?? new List<AuthorWithBooks>();
         }
 
-        throw new Exception("Failed to fetch author details with books.");
+        throw new Exception("Failed to retrieve author and book details.");
     }
 }
 
@@ -41,16 +39,16 @@ namespace MyApplication.Models
 {
     public class AuthorWithBooks
     {
-        public Guid Id { get;set; }
-        public string Name { get;set; }
-        public string Biography { get;set; }
-        public List<Book> Books { get;set; }
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public string Biography { get; set; }
+        public List<Book> Books { get; set; }
     }
 
     public class Book
     {
-        public Guid Id { get;set; }
-        public string Title { get;set; }
-        public string Genre { get;set; }
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string Genre { get; set; }
     }
 }
