@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,6 +28,7 @@ public interface IBookRepository
     Task AddBookAsync(Book book);
     Task UpdateBookAsync(Book book);
     Task DeleteBookAsync(int id);
+    Task<List<Book>> SearchBooksAsync(string searchText);
 }
 
 public class BookRepository : IBookRepository
@@ -62,11 +64,18 @@ public class BookRepository : IBookRepository
 
     public async Task DeleteBookAsync(int id)
     {
-        var book = await _context.Books.FindAsync(id);
+        var book = await _context.Books.FirstOrDefaultAsync(b => b.Id == id);
         if (book != null)
         {
             _context.Books.Remove(book);
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task<List<Book>> SearchBooksAsync(string searchText)
+    {
+        return await _context.Books
+            .Where(b => b.Title.Contains(searchText) || b.Author.Contains(searchText))
+            .ToListAsync();
     }
 }
